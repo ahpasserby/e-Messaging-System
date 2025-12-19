@@ -1,0 +1,377 @@
+#!/usr/bin/expect -f
+
+# 启用实时输出
+log_user 1
+set timeout 10
+
+# 设置全局错误处理：任何expect超时都会导致脚本退出
+expect_before timeout {
+    puts "\n❌ 测试失败: 等待超时，预期输出不匹配"
+    puts "最后看到的输出: $expect_out(buffer)"
+    exit 1
+}
+
+# 清理旧文件，但保留users.txt（因为stage1已经创建了用户）
+exec rm -f friends.txt messages.txt
+
+puts "\n=== Stage2测试: 好友管理 ==="
+puts "=== 注意: 假设stage1已经完成，users.txt已存在 ===\n"
+
+puts "=== 测试1: Cindy登录并测试添加好友功能 ===\n"
+
+# 测试1: Cindy登录并测试添加好友功能
+spawn ./messaging_system
+expect "Choose an option (1-3): "
+send "1\r"
+expect "Please input your account name: "
+send "Cindy\r"
+expect "and password: "
+send "4567A8\r"
+expect "Login successful. Welcome Cindy!"
+expect "Choose an option (1-3): "
+send "1\r"
+
+# 1.1: 添加自己
+expect "Choose an option (1-5): "
+send "1\r"
+expect "Enter usernames to add (in one line separated by space): "
+send "Cindy\r"
+expect "You cannot send a friend request to yourself."
+expect "Choose an option (1-5): "
+
+# 1.2: 添加不存在的账户
+send "1\r"
+expect "Enter usernames to add (in one line separated by space): "
+send "Apple\r"
+expect "Account Apple does not exist."
+expect "Choose an option (1-5): "
+
+# 1.3: 第一次添加Emily
+send "1\r"
+expect "Enter usernames to add (in one line separated by space): "
+send "Emily\r"
+expect "Friend request sent to Emily."
+expect "Choose an option (1-5): "
+
+# 1.4: 第二次添加Emily（已存在待确认请求）
+send "1\r"
+expect "Enter usernames to add (in one line separated by space): "
+send "Emily\r"
+expect "Friend request to Emily is already pending."
+expect "Choose an option (1-5): "
+
+# 1.5: 同时添加多个账户（自己、不存在、已请求）
+send "1\r"
+expect "Enter usernames to add (in one line separated by space): "
+send "Cindy Apple Emily\r"
+expect "You cannot send a friend request to yourself."
+expect "Account Apple does not exist."
+expect "Friend request to Emily is already pending."
+expect "Choose an option (1-5): "
+
+# 1.6: 同时添加多个账户（各种类型）
+send "1\r"
+expect "Enter usernames to add (in one line separated by space): "
+send "Cindy James Apple Emily Sophia\r"
+expect "You cannot send a friend request to yourself."
+expect "Friend request sent to James."
+expect "Account Apple does not exist."
+expect "Friend request to Emily is already pending."
+expect "Friend request sent to Sophia."
+expect "Choose an option (1-5): "
+
+# 退出到登录菜单
+send "5\r"
+expect "Choose an option (1-3): "
+send "3\r"
+expect "Choose an option (1-3): "
+send "3\r"
+expect "Byebye"
+expect eof
+
+puts "=== 测试2: Emily登录并测试添加已发送请求的好友 ==="
+
+# 测试2: Emily登录并测试添加已发送请求的好友
+spawn ./messaging_system
+expect "Choose an option (1-3): "
+send "1\r"
+expect "Please input your account name: "
+send "Emily\r"
+expect "and password: "
+send "e9M2xQ\r"
+expect "Login successful. Welcome Emily!"
+expect "Choose an option (1-3): "
+send "1\r"
+
+# 2.1: Emily尝试添加Cindy（Cindy已向Emily发送请求）
+expect "Choose an option (1-5): "
+send "1\r"
+expect "Enter usernames to add (in one line separated by space): "
+send "Cindy\r"
+expect "Cindy has sent friend request to you."
+expect "Choose an option (1-5): "
+
+# 2.2: 查看待确认请求
+send "2\r"
+expect "Pending friend requests for Emily:"
+expect "1. Cindy"
+expect "2. All"
+expect "3. Back"
+expect "Enter indices (space separated), press Enter to finish: "
+send "3\r"
+
+# 2.3: 添加James和Sophia
+expect "Choose an option (1-5): "
+send "1\r"
+expect "Enter usernames to add (in one line separated by space): "
+send "James Sophia\r"
+expect "Friend request sent to James."
+expect "Friend request sent to Sophia."
+expect "Choose an option (1-5): "
+
+# 退出
+send "5\r"
+expect "Choose an option (1-3): "
+send "3\r"
+expect "Choose an option (1-3): "
+send "3\r"
+expect "Byebye"
+expect eof
+
+puts "=== 测试3: James登录并添加Sophia ==="
+
+# 测试3: James登录并添加Sophia
+spawn ./messaging_system
+expect "Choose an option (1-3): "
+send "1\r"
+expect "Please input your account name: "
+send "James\r"
+expect "and password: "
+send "j8#Kp3\r"
+expect "Login successful. Welcome James!"
+expect "Choose an option (1-3): "
+send "1\r"
+expect "Choose an option (1-5): "
+send "1\r"
+expect "Enter usernames to add (in one line separated by space): "
+send "Sophia\r"
+expect "Friend request sent to Sophia."
+expect "Choose an option (1-5): "
+send "5\r"
+expect "Choose an option (1-3): "
+send "3\r"
+expect "Choose an option (1-3): "
+send "3\r"
+expect "Byebye"
+expect eof
+
+puts "=== 测试4: James接受好友请求 ==="
+
+# 测试4: James接受好友请求
+spawn ./messaging_system
+expect "Choose an option (1-3): "
+send "1\r"
+expect "Please input your account name: "
+send "James\r"
+expect "and password: "
+send "j8#Kp3\r"
+expect "Login successful. Welcome James!"
+expect "Choose an option (1-3): "
+send "1\r"
+
+# 4.1: 查看待确认请求并接受Emily
+expect "Choose an option (1-5): "
+send "2\r"
+expect "Pending friend requests for James:"
+expect "1. Cindy"
+expect "2. Emily"
+expect "3. All"
+expect "4. Back"
+expect "Enter indices (space separated), press Enter to finish: "
+send "2\r"
+expect "Friend requests updated for Emily."
+expect "Choose an option (1-5): "
+
+# 4.2: 显示当前好友
+send "4\r"
+expect "Your friends:"
+expect "1. Emily"
+expect "Choose an option (1-5): "
+
+# 4.3: 接受Cindy
+send "2\r"
+expect "Pending friend requests for James:"
+expect "1. Cindy"
+expect "2. All"
+expect "3. Back"
+expect "Enter indices (space separated), press Enter to finish: "
+send "1\r"
+expect "Friend requests updated for Cindy."
+expect "Choose an option (1-5): "
+
+# 4.4: 再次显示好友
+send "4\r"
+expect "Your friends:"
+expect "1. Cindy"
+expect "2. Emily"
+expect "Choose an option (1-5): "
+
+# 4.5: 检查没有待确认请求
+send "2\r"
+expect "No pending friend requests for James."
+expect "Choose an option (1-5): "
+
+# 退出
+send "5\r"
+expect "Choose an option (1-3): "
+send "3\r"
+expect "Choose an option (1-3): "
+send "3\r"
+expect "Byebye"
+expect eof
+
+puts "=== 测试5: Sophia接受好友请求 ==="
+
+# 测试5: Sophia接受好友请求
+spawn ./messaging_system
+expect "Choose an option (1-3): "
+send "1\r"
+expect "Please input your account name: "
+send "Sophia\r"
+expect "and password: "
+send "s5Rf@v\r"
+expect "Login successful. Welcome Sophia!"
+expect "Choose an option (1-3): "
+send "1\r"
+
+# 5.1: 接受Cindy和Emily（输入"1 2"）
+expect "Choose an option (1-5): "
+send "2\r"
+expect "Pending friend requests for Sophia:"
+expect "1. Cindy"
+expect "2. Emily"
+expect "3. James"
+expect "4. All"
+expect "5. Back"
+expect "Enter indices (space separated), press Enter to finish: "
+send "1 2\r"
+expect "Friend requests updated for Cindy."
+expect "Friend requests updated for Emily."
+expect "Choose an option (1-5): "
+
+# 5.2: 显示好友
+send "4\r"
+expect "Your friends:"
+expect "1. Cindy"
+expect "2. Emily"
+expect "Choose an option (1-5): "
+
+# 5.3: 接受所有剩余请求
+send "2\r"
+expect "Pending friend requests for Sophia:"
+expect "1. James"
+expect "2. All"
+expect "3. Back"
+expect "Enter indices (space separated), press Enter to finish: "
+send "2\r"
+expect "Friend requests updated for all."
+expect "Choose an option (1-5): "
+
+# 退出
+send "5\r"
+expect "Choose an option (1-3): "
+send "3\r"
+expect "Choose an option (1-3): "
+send "3\r"
+expect "Byebye"
+expect eof
+
+puts "=== 测试6: Emily接受所有好友请求 ==="
+
+# 测试6: Emily接受所有好友请求
+spawn ./messaging_system
+expect "Choose an option (1-3): "
+send "1\r"
+expect "Please input your account name: "
+send "Emily\r"
+expect "and password: "
+send "e9M2xQ\r"
+expect "Login successful. Welcome Emily!"
+expect "Choose an option (1-3): "
+send "1\r"
+
+# 6.1: 显示当前好友
+expect "Choose an option (1-5): "
+send "4\r"
+expect "Your friends:"
+expect "1. James"
+expect "2. Sophia"
+expect "Choose an option (1-5): "
+
+# 6.2: 接受所有待确认请求
+send "2\r"
+expect "Pending friend requests for Emily:"
+expect "1. Cindy"
+expect "2. All"
+expect "3. Back"
+expect "Enter indices (space separated), press Enter to finish: "
+send "2\r"
+expect "Friend requests updated for all."
+expect "Choose an option (1-5): "
+
+# 6.3: 再次显示好友
+send "4\r"
+expect "Your friends:"
+expect "1. Cindy"
+expect "2. James"
+expect "3. Sophia"
+expect "Choose an option (1-5): "
+
+# 退出
+send "5\r"
+expect "Choose an option (1-3): "
+send "3\r"
+expect "Choose an option (1-3): "
+send "3\r"
+expect "Byebye"
+expect eof
+
+puts "=== 测试7: Cindy检查好友 ==="
+
+# 测试7: Cindy检查好友
+spawn ./messaging_system
+expect "Choose an option (1-3): "
+send "1\r"
+expect "Please input your account name: "
+send "Cindy\r"
+expect "and password: "
+send "4567A8\r"
+expect "Login successful. Welcome Cindy!"
+expect "Choose an option (1-3): "
+send "1\r"
+
+# 7.1: 检查没有待确认请求
+expect "Choose an option (1-5): "
+send "2\r"
+expect "No pending friend requests for Cindy."
+expect "Choose an option (1-5): "
+
+# 7.2: 显示好友
+send "4\r"
+expect "Your friends:"
+expect "1. Emily"
+expect "2. James"
+expect "3. Sophia"
+expect "Choose an option (1-5): "
+
+# 退出
+send "5\r"
+expect "Choose an option (1-3): "
+send "3\r"
+expect "Choose an option (1-3): "
+send "3\r"
+expect "Byebye"
+expect eof
+
+puts "=== Stage2测试完成 ==="
+puts "=== 此时应生成friends.txt文件，可以手动打包为stage2.zip ==="

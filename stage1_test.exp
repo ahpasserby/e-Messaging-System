@@ -1,0 +1,195 @@
+#!/usr/bin/expect -f
+
+# 启用实时输出
+log_user 1
+set timeout 10
+
+# 设置全局错误处理：任何expect超时都会导致脚本退出
+expect_before timeout {
+    puts "\n❌ 测试失败: 等待超时，预期输出不匹配"
+    puts "最后看到的输出: $expect_out(buffer)"
+    exit 1
+}
+
+# 清理旧文件
+exec rm -f users.txt friends.txt messages.txt
+
+puts "\n=== Stage1测试: 注册和登录 ==="
+puts "=== 测试1: 无效选项 ===\n"
+
+# 测试1: 无效选项
+spawn ./messaging_system
+expect "Choose an option (1-3): "
+send "4\r"
+expect "Invalid choice! Please enter a number between 1 and 3."
+expect "Choose an option (1-3): "
+send "3\r"
+expect "Byebye"
+expect eof
+
+puts "=== 测试2: 当系统中没有账户时尝试登录 ==="
+
+# 测试2: 当系统中没有账户时尝试登录
+spawn ./messaging_system
+expect "Choose an option (1-3): "
+send "1\r"
+expect "Please input your account name: "
+send "Tom\r"
+expect "and password: "
+send "123\r"
+expect "No user in this system, please register one."
+expect "Choose an option (1-3): "
+send "3\r"
+expect "Byebye"
+expect eof
+
+puts "=== 测试3: 注册 - 密码不匹配 ==="
+
+# 测试3: 注册 - 密码不匹配
+spawn ./messaging_system
+expect "Choose an option (1-3): "
+send "2\r"
+expect "Enter account name: "
+send "Cindy\r"
+expect "Enter password: "
+send "123456\r"
+expect "Confirm password: "
+send "654321\r"
+expect "Passwords do not match. Registration failed."
+expect "Choose an option (1-3): "
+send "3\r"
+expect "Byebye"
+expect eof
+
+puts "=== 测试4: 成功注册Cindy ==="
+
+# 测试4: 成功注册Cindy
+spawn ./messaging_system
+expect "Choose an option (1-3): "
+send "2\r"
+expect "Enter account name: "
+send "Cindy\r"
+expect "Enter password: "
+send "4567A8\r"
+expect "Confirm password: "
+send "4567A8\r"
+expect "Registration successful! You can now login."
+expect "Choose an option (1-3): "
+send "3\r"
+expect "Byebye"
+expect eof
+
+puts "=== 测试5: 尝试注册已存在的账户 ==="
+
+# 测试5: 尝试注册已存在的账户
+spawn ./messaging_system
+expect "Choose an option (1-3): "
+send "2\r"
+expect "Enter account name: "
+send "Cindy\r"
+expect "Account name already exists."
+expect "Choose an option (1-3): "
+send "3\r"
+expect "Byebye"
+expect eof
+
+puts "=== 测试6: 注册其他用户 (Emily, James, Sophia) ==="
+
+# 测试6: 注册其他用户 (Emily, James, Sophia)
+spawn ./messaging_system
+expect "Choose an option (1-3): "
+send "2\r"
+expect "Enter account name: "
+send "Emily\r"
+expect "Enter password: "
+send "e9M2xQ\r"
+expect "Confirm password: "
+send "e9M2xQ\r"
+expect "Registration successful! You can now login."
+expect "Choose an option (1-3): "
+send "3\r"
+expect "Byebye"
+expect eof
+
+spawn ./messaging_system
+expect "Choose an option (1-3): "
+send "2\r"
+expect "Enter account name: "
+send "James\r"
+expect "Enter password: "
+send "j8#Kp3\r"
+expect "Confirm password: "
+send "j8#Kp3\r"
+expect "Registration successful! You can now login."
+expect "Choose an option (1-3): "
+send "3\r"
+expect "Byebye"
+expect eof
+
+spawn ./messaging_system
+expect "Choose an option (1-3): "
+send "2\r"
+expect "Enter account name: "
+send "Sophia\r"
+expect "Enter password: "
+send "s5Rf@v\r"
+expect "Confirm password: "
+send "s5Rf@v\r"
+expect "Registration successful! You can now login."
+expect "Choose an option (1-3): "
+send "3\r"
+expect "Byebye"
+expect eof
+
+puts "=== 测试7: 登录 - 账户不存在 ==="
+
+# 测试7: 登录 - 账户不存在
+spawn ./messaging_system
+expect "Choose an option (1-3): "
+send "1\r"
+expect "Please input your account name: "
+send "Tom\r"
+expect "and password: "
+send "123\r"
+expect "Warning! Account name not found."
+expect "Choose an option (1-3): "
+send "3\r"
+expect "Byebye"
+expect eof
+
+puts "=== 测试8: 登录 - 密码错误 ==="
+
+# 测试8: 登录 - 密码错误
+spawn ./messaging_system
+expect "Choose an option (1-3): "
+send "1\r"
+expect "Please input your account name: "
+send "Cindy\r"
+expect "and password: "
+send "123456\r"
+expect "Warning! Incorrect password."
+expect "Choose an option (1-3): "
+send "3\r"
+expect "Byebye"
+expect eof
+
+puts "=== 测试9: 登录成功并测试Main Service Back功能 ==="
+
+# 测试9: 登录成功并测试Main Service Back功能
+spawn ./messaging_system
+expect "Choose an option (1-3): "
+send "1\r"
+expect "Please input your account name: "
+send "Cindy\r"
+expect "and password: "
+send "4567A8\r"
+expect "Login successful. Welcome Cindy!"
+expect "Choose an option (1-3): "
+send "3\r"
+expect "Choose an option (1-3): "
+send "3\r"
+expect "Byebye"
+expect eof
+
+puts "=== Stage1测试完成 ==="
+puts "=== 此时应生成users.txt文件，可以手动打包为stage1.zip ==="
