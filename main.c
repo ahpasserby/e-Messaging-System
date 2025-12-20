@@ -6,6 +6,17 @@
 #include "file_operations.h"
 #include <stdio.h>
 
+/**
+ * Initializes the system by loading persistent data from files.
+ * This function is called once at program startup.
+ * 
+ * Loads:
+ * 1. User credentials from "users.txt"
+ * 2. Friend relationships from "friends.txt"
+ * 
+ * Note: Messages are NOT loaded here because they are user-specific.
+ * Messages are loaded only after a user successfully logs in.
+ */
 void initialize_system() {
     load_users();
     load_friends();
